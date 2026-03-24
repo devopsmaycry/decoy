@@ -1,0 +1,19 @@
+version: "1.0"
+
+listeners:
+  - port: "2222"
+    type: ssh
+  - port: "8080"
+    type: http
+  - port: "9000"
+    type: tcp
+
+ssh:
+  logUsername: true
+  logPassword: true
+
+syslog:
+  enabled: false
+  server: "127.0.0.1"
+  port: "514"
+  cliEnabled: true
