@@ -4,10 +4,17 @@ import (
 	"decoy/logger"
 	"io"
 	"net/http"
+	"time"
 )
 
-func StartHTTP(port string, log *logger.Logger) {
+type HttpsOptions struct {
+	ServerCert string `yaml:"serverCertificate"`
+	ServerKey  string `yaml:"serverCertificateKey"`
+}
+
+func StartHTTP(port string, log *logger.Logger, opts HttpsOptions, ssl bool) {
 	mux := http.NewServeMux()
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(io.LimitReader(r.Body, 4096))
 
@@ -26,6 +33,7 @@ func StartHTTP(port string, log *logger.Logger) {
 			"query":     r.URL.RawQuery,
 			"headers":   headers,
 			"body":      string(body),
+			"ssl":       ssl,
 		}
 		if len(body) == 4096 {
 			fields["body_truncated"] = true
@@ -35,8 +43,23 @@ func StartHTTP(port string, log *logger.Logger) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	log.Log("http_listening", map[string]any{"port": port})
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
-		log.Log("http_listen_error", map[string]any{"port": port, "error": err.Error()})
+	srv := &http.Server{
+		Addr:         ":" + port,
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  30 * time.Second,
+	}
+
+	log.Log("http_listening", map[string]any{"port": port, "ssl": ssl})
+
+	var err error
+	if ssl {
+		err = srv.ListenAndServeTLS(opts.ServerCert, opts.ServerKey)
+	} else {
+		err = srv.ListenAndServe()
+	}
+	if err != nil {
+		log.Log("http_listen_error", map[string]any{"port": port, "ssl": ssl, "error": err.Error()})
 	}
 }
