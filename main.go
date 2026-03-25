@@ -16,12 +16,14 @@ import (
 type ListenerConfig struct {
 	Port string `yaml:"port"`
 	Type string `yaml:"type"`
+	Ssl  bool   `yaml:"ssl"`
 }
 
 type Config struct {
-	Listeners  []ListenerConfig     `yaml:"listeners"`
-	SSHoptions listeners.SSHOptions `yaml:"ssh"`
-	Syslog     logger.SyslogConfig  `yaml:"syslog"`
+	Listeners    []ListenerConfig       `yaml:"listeners"`
+	SSHoptions   listeners.SSHOptions   `yaml:"ssh"`
+	Syslog       logger.SyslogConfig    `yaml:"syslog"`
+	HttpsOptions listeners.HttpsOptions `yaml:"https"`
 }
 
 func main() {
@@ -47,9 +49,22 @@ func main() {
 			Enabled:    false,
 			CliEnabled: true,
 		},
+		HttpsOptions: listeners.HttpsOptions{
+			ServerCert: "",
+			ServerKey:  "",
+		},
 	}
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		log.Fatalf("cannot parse config: %v", err)
+	}
+
+	// Validate HTTPS config upfront
+	for _, l := range cfg.Listeners {
+		if l.Type == "http" && l.Ssl {
+			if cfg.HttpsOptions.ServerCert == "" || cfg.HttpsOptions.ServerKey == "" {
+				log.Fatal("https listener configured but https.serverCertificate or https.serverCertificateKey is missing")
+			}
+		}
 	}
 
 	appLog := logger.New(cfg.Syslog)
@@ -60,7 +75,7 @@ func main() {
 		case "tcp":
 			go listeners.StartTCP(l.Port, appLog)
 		case "http":
-			go listeners.StartHTTP(l.Port, appLog)
+			go listeners.StartHTTP(l.Port, appLog, cfg.HttpsOptions, l.Ssl)
 		case "ssh":
 			go listeners.StartSSH(l.Port, appLog, cfg.SSHoptions)
 		default:
