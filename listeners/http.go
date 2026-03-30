@@ -1,18 +1,14 @@
 package listeners
 
 import (
+	"decoy/config"
 	"decoy/logger"
 	"io"
 	"net/http"
 	"time"
 )
 
-type HttpsOptions struct {
-	ServerCert string `yaml:"serverCertificate"`
-	ServerKey  string `yaml:"serverCertificateKey"`
-}
-
-func StartHTTP(port string, log *logger.Logger, opts HttpsOptions, ssl bool) {
+func StartHTTP(port string, log *logger.Logger, opts config.HttpsConfig, ssl bool, path string) {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +51,7 @@ func StartHTTP(port string, log *logger.Logger, opts HttpsOptions, ssl bool) {
 
 	var err error
 	if ssl {
-		err = srv.ListenAndServeTLS(opts.ServerCert, opts.ServerKey)
+		err = srv.ListenAndServeTLS(opts.CertFile, opts.KeyFile)
 	} else {
 		err = srv.ListenAndServe()
 	}
