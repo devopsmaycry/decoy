@@ -1,15 +1,11 @@
-version: "1.1"
+version: "1.2"
 
 listeners:
   - port: "2222"
     type: ssh
   - port: "8080"
     type: http
-  - port: "4343"
-    type: http
-    ssl: true
-  - port: "9000"
-    type: tcp
+    path: "/login"
 
 ssh:
   logUsername: true
@@ -17,8 +13,8 @@ ssh:
   sshShowedVersion: "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6"
 
 https:
-  serverCertificate: "server.crt"
-  serverCertificateKey: "server.key"
+  serverCertificate: "./dev/server.crt"
+  serverCertificateKey: "./dev/server.key"
 
 syslog:
   enabled: false

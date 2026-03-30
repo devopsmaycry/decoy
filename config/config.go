@@ -5,8 +5,6 @@ import (
 	"log"
 	"os"
 
-	"decoy/logger"
-
 	"gopkg.in/yaml.v3"
 )
 
@@ -23,9 +21,11 @@ type SshConfig struct {
 	SshServerVersion string `yaml:"sshShowedVersion"`
 }
 
-type HttpsConfig struct {
-	CertFile string `yaml:"serverCertificate"`
-	KeyFile  string `yaml:"serverCertificateKey"`
+type HttpServerConfig struct {
+	Server     string `yaml:"Server"`
+	XPoweredBy string `yaml:"X-Powered-By"`
+	CertFile   string `yaml:"serverCertificate"`
+	KeyFile    string `yaml:"serverCertificateKey"`
 }
 
 type SyslogConfig struct {
@@ -39,13 +39,12 @@ type Config struct {
 	Version   string           `yaml:"version"`
 	Listeners []listenerConfig `yaml:"listeners"`
 	Ssh       SshConfig        `yaml:"ssh"`
-	Https     HttpsConfig      `yaml:"https"`
+	Https     HttpServerConfig `yaml:"httpServer"`
 	Syslog    SyslogConfig     `yaml:"syslog"`
 	LogLevel  string           `yaml:"logLevel"`
 }
 
-func Load(logger *logger.Logger) Config {
-	logger.Log("Loading config file", nil)
+func Load() Config {
 	configPath := flag.String("config", "config/config.yaml", "path to config file")
 	flag.Parse()
 
@@ -57,17 +56,19 @@ func Load(logger *logger.Logger) Config {
 	cfg := Config{
 		Version: "1.2",
 		Listeners: []listenerConfig{
-			{Port: "2222", Type: "ssh", Ssl: false},
-			{Port: "80808", Type: "http", Ssl: false},
+			{Port: "2222", Type: "ssh", Ssl: false, Path: "/"},
+			{Port: "80808", Type: "http", Ssl: false, Path: "/"},
 		},
 		Ssh: SshConfig{
 			LogUsername:      false,
 			LogPassword:      false,
 			SshServerVersion: "SSH-2.0-OpenSSH_8.9p1 Debian-3",
 		},
-		Https: HttpsConfig{
-			CertFile: "",
-			KeyFile:  "",
+		Https: HttpServerConfig{
+			CertFile:   "",
+			KeyFile:    "",
+			Server:     "Apache/2.2.22 (Debian)",
+			XPoweredBy: "PHP/5.6.40",
 		},
 		Syslog: SyslogConfig{
 			Enabled:    false,

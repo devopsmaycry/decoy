@@ -13,18 +13,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type SSHOptions struct {
-	LogUsername      bool   `yaml:"logUsername"`
-	LogPassword      bool   `yaml:"logPassword"`
-	SshServerVersion string `yaml:"sshShowedVersion"`
-}
-
-const defaultSSHVersion = "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6"
-
 func StartSSH(port string, log *logger.Logger, opts config.SshConfig) {
-	if opts.SshServerVersion == "" {
-		opts.SshServerVersion = defaultSSHVersion
-	}
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		log.Log("ssh_keygen_error", map[string]any{"error": err.Error()})

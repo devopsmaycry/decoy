@@ -3,15 +3,33 @@ package listeners
 import (
 	"decoy/config"
 	"decoy/logger"
+	"decoy/web"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
-func StartHTTP(port string, log *logger.Logger, opts config.HttpsConfig, ssl bool, path string) {
+func setDecoyHeaders(w http.ResponseWriter, opts config.HttpServerConfig) {
+	w.Header().Set("Server", opts.Server)
+	w.Header().Set("X-Powered-By", opts.XPoweredBy)
+	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "Thu, 01 Jan 1970 00:00:00 GMT")
+	w.Header().Set("Content-Type", "text/html; charset=UTF-8")
+}
+
+func renderLoginPage(errorMsg string) []byte {
+	return []byte(strings.ReplaceAll(string(web.LoginPage), "{{ERROR}}", errorMsg))
+}
+
+func StartHTTP(port string, ssl bool, path string,
+	log *logger.Logger, opts config.HttpServerConfig) {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(io.LimitReader(r.Body, 4096))
 
 		headers := map[string]string{}
@@ -35,8 +53,24 @@ func StartHTTP(port string, log *logger.Logger, opts config.HttpsConfig, ssl boo
 			fields["body_truncated"] = true
 		}
 
+		if r.Method == http.MethodPost {
+			if params, err := url.ParseQuery(string(body)); err == nil {
+				fields["username"] = params.Get("username")
+				fields["password"] = params.Get("password")
+			}
+		}
+
 		log.Log("http_request", fields)
+		setDecoyHeaders(w, opts)
+
+		if r.Method == http.MethodPost {
+			w.WriteHeader(http.StatusOK)
+			w.Write(renderLoginPage(`<div class="error-msg">&#x26A0; Invalid username or password. Please try again.</div>`))
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
+		w.Write(renderLoginPage(""))
 	})
 
 	srv := &http.Server{
@@ -56,6 +90,6 @@ func StartHTTP(port string, log *logger.Logger, opts config.HttpsConfig, ssl boo
 		err = srv.ListenAndServe()
 	}
 	if err != nil {
-		log.Log("http_listen_error", map[string]any{"port": port, "ssl": ssl, "error": err.Error()})
+		log.Log("http_listen_error", map[string]any{"port": port, "path": path, "ssl": ssl, "error": err.Error()})
 	}
 }

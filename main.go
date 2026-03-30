@@ -1,73 +1,44 @@
 package main
 
 import (
+	"decoy/config"
 	"decoy/listeners"
 	"decoy/logger"
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"gopkg.in/yaml.v3"
 )
 
-type ListenerConfig struct {
-	Port string `yaml:"port"`
-	Type string `yaml:"type"`
-	Ssl  bool   `yaml:"ssl"`
-}
-
-type Config struct {
-	Listeners    []ListenerConfig       `yaml:"listeners"`
-	SSHoptions   listeners.SSHOptions   `yaml:"ssh"`
-	Syslog       logger.SyslogConfig    `yaml:"syslog"`
-	HttpsOptions listeners.HttpsOptions `yaml:"https"`
-}
-
 func main() {
-	configPath := flag.String("config", "config/config.yaml", "path to config file")
-	flag.Parse()
 
 	fmt.Print("==========================\n")
 	fmt.Print("| Starting Decoy Service |\n")
 	fmt.Println("|    A lightweight \U0001F36F    |")
 	fmt.Print("==========================\n")
 
-	data, err := os.ReadFile(*configPath)
-	if err != nil {
-		log.Fatalf("cannot read config: %v", err)
-	}
+	// load the whole config
+	cfg := config.Load()
 
-	cfg := Config{
-		SSHoptions: listeners.SSHOptions{
-			LogUsername: false,
-			LogPassword: false,
-		},
-		Syslog: logger.SyslogConfig{
-			Enabled:    false,
-			CliEnabled: true,
-		},
-		HttpsOptions: listeners.HttpsOptions{
-			ServerCert: "",
-			ServerKey:  "",
-		},
-	}
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		log.Fatalf("cannot parse config: %v", err)
+	// Validate config version
+	if cfg.Version != "1.2" {
+		log.Fatalf("unsupported config version: %s", cfg.Version)
 	}
 
 	// Validate HTTPS config upfront
 	for _, l := range cfg.Listeners {
 		if l.Type == "http" && l.Ssl {
-			if cfg.HttpsOptions.ServerCert == "" || cfg.HttpsOptions.ServerKey == "" {
+			if cfg.Https.CertFile == "" || cfg.Https.KeyFile == "" {
 				log.Fatal("https listener configured but https.serverCertificate or https.serverCertificateKey is missing")
 			}
 		}
+		if l.Type == "http" && l.Path == "" {
+			log.Fatal("http listener path is missing")
+		}
 	}
 
-	appLog := logger.New(cfg.Syslog)
+	appLog := logger.New(logger.SyslogConfig(cfg.Syslog))
 	appLog.Log("decoy_started", map[string]any{"listener_count": len(cfg.Listeners)})
 
 	for _, l := range cfg.Listeners {
@@ -75,9 +46,9 @@ func main() {
 		case "tcp":
 			go listeners.StartTCP(l.Port, appLog)
 		case "http":
-			go listeners.StartHTTP(l.Port, appLog, cfg.HttpsOptions, l.Ssl)
+			go listeners.StartHTTP(l.Port, l.Ssl, l.Path, appLog, cfg.Https)
 		case "ssh":
-			go listeners.StartSSH(l.Port, appLog, cfg.SSHoptions)
+			go listeners.StartSSH(l.Port, appLog, cfg.Ssh)
 		default:
 			appLog.Log("unknown_listener_type", map[string]any{
 				"type": l.Type,
