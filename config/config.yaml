@@ -1,27 +1,140 @@
-version: "1.1"
+version: "1.2"
 
+# ─────────────────────────────────────────────────────────
+#  SSH & TCP listeners
+#  Supported types: ssh, tcp
+#  HTTP listeners are configured separately in httpListeners
+# ─────────────────────────────────────────────────────────
 listeners:
+
+  # SSH honeypot — captures username/password from every login attempt
   - port: "2222"
     type: ssh
-  - port: "8080"
-    type: http
-  - port: "4343"
-    type: http
-    ssl: true
-  - port: "9000"
-    type: tcp
 
+  # TCP service emulations — each sends a realistic protocol banner
+  # and logs the first 4 KB received from the client.
+  # Available services: smtp, ftp, redis, mysql, mssql
+
+  #- port: "25"      # SMTP (requires CAP_NET_BIND_SERVICE or root for ports < 1024)
+  #  type: tcp
+  #  service: smtp
+
+  - port: "2525"    # Alternate SMTP (no privilege required)
+    type: tcp
+    service: smtp
+
+  - port: "21"      # FTP
+    type: tcp
+    service: ftp
+
+  - port: "2121"    # Alternate FTP
+    type: tcp
+    service: ftp
+
+  - port: "6379"    # Redis
+    type: tcp
+    service: redis
+
+  - port: "3306"    # MySQL
+    type: tcp
+    service: mysql
+
+  - port: "1433"    # MSSQL
+    type: tcp
+    service: mssql
+
+# ─────────────────────────────────────────────────────────
+#  HTTP / HTTPS listeners
+#  Each entry runs its own HTTP server on the specified port.
+#
+#  Required fields per entry:
+#    port   — TCP port to listen on
+#    path   — URL path that serves the login page (e.g. /login)
+#
+#  Optional fields:
+#    Server         — Server response header (default: Apache/2.2.22 (Debian))
+#    X-Powered-By   — X-Powered-By response header (default: PHP/5.6.40)
+#    websiteEnabled — Serve the built-in login page HTML (default: false)
+#    redirectUrl    — Redirect GET requests to this URL instead of serving HTML
+#    sslEnabled     — Enable TLS (requires serverCertificate + serverCertificateKey)
+#    serverCertificate    — Path to PEM certificate file
+#    serverCertificateKey — Path to PEM private key file
+#
+#  All requests to any path OTHER than the configured path are logged
+#  as http_probe events and receive a 404 response.
+# ─────────────────────────────────────────────────────────
+httpListeners:
+
+  # Plain HTTP — serves the built-in "NetAdmin Pro" login page.
+  # POST submissions (username/password) are logged and receive an
+  # "Invalid credentials" response to keep the attacker engaged.
+  - port: "8080"
+    path: "/admin/login"
+    Server: "Apache/2.4.51 (Debian)"
+    X-Powered-By: "PHP/7.4.33"
+    websiteEnabled: true
+
+  # HTTPS — same login page over TLS. Use a real certificate so the
+  # TLS handshake looks legitimate to automated scanners.
+  - port: "4343"
+    path: "/admin/login"
+    Server: "Apache/2.4.51 (Debian)"
+    X-Powered-By: "PHP/7.4.33"
+    websiteEnabled: true
+    sslEnabled: true
+    serverCertificate: ".dev/server.crt"
+    serverCertificateKey: ".dev/server.key"
+
+  # WordPress login page emulation — redirect GET to /wp-login.php
+  # then log every POST credential attempt.
+  # only works when you rebuild the service with your own index.html
+  #- port: "8088"
+  #  path: "/wp-login.php"
+  #  Server: "nginx/1.18.0"
+  #  X-Powered-By: "PHP/8.1.27"
+  #  websiteEnabled: true
+
+  # Redirect decoy — any visitor is redirected to an internal portal URL.
+  # useful for internal http to https redirects
+  # - port: "9090"
+  #   path: "/"
+  #   redirectUrl: "https://localhost/portal"
+
+# ─────────────────────────────────────────────────────────
+#  SSH options
+# ─────────────────────────────────────────────────────────
 ssh:
+  # Log the attempted username in plaintext.
+  # Set to false to redact as ******** in the log output.
   logUsername: true
+
+  # Log the attempted password in plaintext.
+  # Set to false to redact as ******** in the log output.
+  # Consider your data-handling policy before enabling in production.
   logPassword: true
+
+  # SSH version banner presented to connecting clients.
+  # Mimicking a real server version reduces trivial honeypot detection.
   sshShowedVersion: "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6"
 
-https:
-  serverCertificate: ".dev/server.crt"
-  serverCertificateKey: ".dev/server.key"
+# ─────────────────────────────────────────────────────────
+#  TCP service banner overrides
+#  Defaults are set automatically if these fields are empty.
+# ─────────────────────────────────────────────────────────
+service:
+  ftpBanner:   "220 Microsoft FTP Service"
+  redisBanner: "-NOAUTH Authentication required."
+  smtpBanner:  "220 mail.corp.local ESMTP Postfix (Debian/GNU)"
 
+# ─────────────────────────────────────────────────────────
+#  Logging
+# ─────────────────────────────────────────────────────────
 syslog:
-  enabled: false
-  server: "127.0.0.1"
-  port: "514"
+  # Write JSON log lines to stdout (recommended — pipe to journald, Vector, etc.)
   cliEnabled: true
+
+  # Forward logs to a syslog server via UDP.
+  # Combine with Logstash, Graylog, or any UDP syslog receiver.
+  enabled: false
+  server: "192.168.10.10"
+  port: "514"

@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"decoy/config"
 	"decoy/logger"
 	"fmt"
 	"net"
@@ -12,18 +13,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type SSHOptions struct {
-	LogUsername      bool   `yaml:"logUsername"`
-	LogPassword      bool   `yaml:"logPassword"`
-	SshServerVersion string `yaml:"sshShowedVersion"`
-}
-
-const defaultSSHVersion = "SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6"
-
-func StartSSH(port string, log *logger.Logger, opts SSHOptions) {
-	if opts.SshServerVersion == "" {
-		opts.SshServerVersion = defaultSSHVersion
-	}
+func StartSSH(port string, log *logger.Logger, opts config.SshConfig) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		log.Log("ssh_keygen_error", map[string]any{"error": err.Error()})
@@ -35,7 +25,7 @@ func StartSSH(port string, log *logger.Logger, opts SSHOptions) {
 		return
 	}
 
-	config := &ssh.ServerConfig{
+	sshCfg := &ssh.ServerConfig{
 		ServerVersion: opts.SshServerVersion,
 		PasswordCallback: func(conn ssh.ConnMetadata, password []byte) (*ssh.Permissions, error) {
 			fields := map[string]any{
@@ -57,7 +47,7 @@ func StartSSH(port string, log *logger.Logger, opts SSHOptions) {
 			return nil, fmt.Errorf("denied")
 		},
 	}
-	config.AddHostKey(signer)
+	sshCfg.AddHostKey(signer)
 
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
@@ -73,9 +63,16 @@ func StartSSH(port string, log *logger.Logger, opts SSHOptions) {
 			continue
 		}
 		go func(c net.Conn) {
+			remoteAddr := c.RemoteAddr().String()
+			if !connLimiter.allowConn(remoteAddr) {
+				log.Log("ssh_rate_limited", map[string]any{"port": port, "remote_ip": remoteAddr})
+				c.Close()
+				return
+			}
+			defer connLimiter.releaseConn()
 			defer c.Close()
 			c.SetDeadline(time.Now().Add(30 * time.Second))
-			ssh.NewServerConn(c, config)
+			_, _, _, _ = ssh.NewServerConn(c, sshCfg)
 		}(conn)
 	}
 }

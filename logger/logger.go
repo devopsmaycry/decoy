@@ -48,7 +48,11 @@ func (l *Logger) Log(event string, fields map[string]any) {
 	for k, v := range fields {
 		entry[k] = v
 	}
-	b, _ := json.Marshal(entry)
+	b, err := json.Marshal(entry)
+	if err != nil {
+		b = fmt.Appendf(nil, `{"time":%q,"event":%q,"logger_error":%q}`,
+			entry["time"], entry["event"], err.Error())
+	}
 
 	if l.cliEnabled {
 		os.Stdout.Write(append(b, '\n'))

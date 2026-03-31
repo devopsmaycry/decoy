@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE9">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetAdmin Pro &mdash; Login</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #2b3a4a;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #wrapper {
+    width: 380px;
+  }
+  #logo-bar {
+    background: #1b2838;
+    border-radius: 4px 4px 0 0;
+    padding: 18px 24px 14px;
+    border-bottom: 3px solid #4a90d9;
+    text-align: center;
+  }
+  #logo-bar h1 {
+    color: #e8f0f8;
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  #logo-bar .subtitle {
+    color: #7a9bbf;
+    font-size: 11px;
+    margin-top: 3px;
+    letter-spacing: 0.5px;
+  }
+  #login-box {
+    background: #f4f6f8;
+    border: 1px solid #c8d0d8;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    padding: 28px 28px 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .field-group {
+    margin-bottom: 16px;
+  }
+  .field-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+    color: #4a5568;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .field-group input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #b0bbc8;
+    border-radius: 3px;
+    font-size: 13px;
+    background: #fff;
+    color: #222;
+    outline: none;
+  }
+  .field-group input:focus {
+    border-color: #4a90d9;
+    box-shadow: 0 0 0 2px rgba(74,144,217,0.15);
+  }
+  .error-msg {
+    background: #fde8e8;
+    border: 1px solid #e08080;
+    color: #922;
+    padding: 8px 12px;
+    border-radius: 3px;
+    font-size: 12px;
+    margin-bottom: 16px;
+  }
+  .btn-login {
+    width: 100%;
+    padding: 9px;
+    background: linear-gradient(to bottom, #5ba3e8 0%, #3a7fc8 100%);
+    color: #fff;
+    font-size: 14px;
+    font-weight: bold;
+    border: 1px solid #2e6aac;
+    border-radius: 3px;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+  }
+  .btn-login:hover {
+    background: linear-gradient(to bottom, #6bb3f5 0%, #4a8fd8 100%);
+  }
+  #footer {
+    margin-top: 18px;
+    text-align: center;
+    color: #7a8fa0;
+    font-size: 11px;
+  }
+  #footer a { color: #7a8fa0; text-decoration: none; }
+  .sys-info {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #d8dde4;
+    font-size: 11px;
+    color: #8a9aaa;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div id="wrapper">
+  <div id="logo-bar">
+    <h1>NetAdmin Pro</h1>
+    <div class="subtitle">SYSTEM ADMINISTRATION PORTAL</div>
+  </div>
+  <div id="login-box">
+    {{ERROR}}
+    <form method="POST" action="" autocomplete="off">
+      <div class="field-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" tabindex="1" autofocus>
+      </div>
+      <div class="field-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" tabindex="2">
+      </div>
+      <button type="submit" class="btn-login" tabindex="3">Sign In</button>
+      <div class="sys-info">
+        NetAdmin Pro v3.4.1 &nbsp;&bull;
+      </div>
+    </form>
+  </div>
+  <div id="footer">
+    &copy; 2011&ndash;2017 NetAdmin Systems Ltd. All rights reserved.<br>
+    <a href="#">Help</a> &nbsp;&bull;&nbsp; <a href="#">Forgot password?</a>
+  </div>
+</div>
+</body>
+</html>

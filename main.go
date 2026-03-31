@@ -1,89 +1,82 @@
 package main
 
 import (
+	"decoy/config"
 	"decoy/listeners"
 	"decoy/logger"
-	"flag"
+	"decoy/services"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"gopkg.in/yaml.v3"
 )
 
-type ListenerConfig struct {
-	Port string `yaml:"port"`
-	Type string `yaml:"type"`
-	Ssl  bool   `yaml:"ssl"`
-}
-
-type Config struct {
-	Listeners    []ListenerConfig       `yaml:"listeners"`
-	SSHoptions   listeners.SSHOptions   `yaml:"ssh"`
-	Syslog       logger.SyslogConfig    `yaml:"syslog"`
-	HttpsOptions listeners.HttpsOptions `yaml:"https"`
-}
-
 func main() {
-	configPath := flag.String("config", "config/config.yaml", "path to config file")
-	flag.Parse()
 
 	fmt.Print("==========================\n")
 	fmt.Print("| Starting Decoy Service |\n")
 	fmt.Println("|    A lightweight \U0001F36F    |")
 	fmt.Print("==========================\n")
 
-	data, err := os.ReadFile(*configPath)
-	if err != nil {
-		log.Fatalf("cannot read config: %v", err)
+	// load the whole config
+	cfg := config.Load()
+
+	// Validate config version
+	if cfg.Version != "1.2" {
+		log.Fatalf("unsupported config version: %s", cfg.Version)
 	}
 
-	cfg := Config{
-		SSHoptions: listeners.SSHOptions{
-			LogUsername: false,
-			LogPassword: false,
-		},
-		Syslog: logger.SyslogConfig{
-			Enabled:    false,
-			CliEnabled: true,
-		},
-		HttpsOptions: listeners.HttpsOptions{
-			ServerCert: "",
-			ServerKey:  "",
-		},
-	}
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		log.Fatalf("cannot parse config: %v", err)
-	}
-
-	// Validate HTTPS config upfront
-	for _, l := range cfg.Listeners {
-		if l.Type == "http" && l.Ssl {
-			if cfg.HttpsOptions.ServerCert == "" || cfg.HttpsOptions.ServerKey == "" {
+	// Validate httpListener config upfront
+	for _, hL := range cfg.HttpListeners {
+		if hL.SslEnabled {
+			if hL.CertFile == "" || hL.KeyFile == "" {
 				log.Fatal("https listener configured but https.serverCertificate or https.serverCertificateKey is missing")
 			}
 		}
+		if hL.Path == "" {
+			log.Fatal("http listener path is missing")
+		}
 	}
 
-	appLog := logger.New(cfg.Syslog)
+	// validate service banners
+	if cfg.Service.FtpBanner == "" {
+		cfg.Service.FtpBanner = "220 Microsoft FTP Service"
+	}
+	if cfg.Service.RedisBanner == "" {
+		cfg.Service.RedisBanner = "-NOAUTH Authentication required."
+	}
+	if cfg.Service.SmtpBanner == "" {
+		cfg.Service.SmtpBanner = "220 mail.corp.local ESMTP Postfix (Debian/GNU)"
+	}
+
+	services.Init(cfg.Service.FtpBanner, cfg.Service.RedisBanner, cfg.Service.SmtpBanner)
+
+	appLog := logger.New(logger.SyslogConfig(cfg.Syslog))
 	appLog.Log("decoy_started", map[string]any{"listener_count": len(cfg.Listeners)})
 
 	for _, l := range cfg.Listeners {
 		switch l.Type {
 		case "tcp":
-			go listeners.StartTCP(l.Port, appLog)
-		case "http":
-			go listeners.StartHTTP(l.Port, appLog, cfg.HttpsOptions, l.Ssl)
+			go listeners.StartTCP(l.Port, l.Service, appLog)
 		case "ssh":
-			go listeners.StartSSH(l.Port, appLog, cfg.SSHoptions)
+			go listeners.StartSSH(l.Port, appLog, cfg.Ssh)
 		default:
 			appLog.Log("unknown_listener_type", map[string]any{
 				"type": l.Type,
-				"port": l.Port,
 			})
 		}
+	}
+
+	for i := range cfg.HttpListeners {
+		hL := &cfg.HttpListeners[i]
+		if hL.Server == "" {
+			hL.Server = "Apache/2.2.22 (Debian)"
+		}
+		if hL.XPoweredBy == "" {
+			hL.XPoweredBy = "PHP/5.6.40"
+		}
+		go listeners.StartHTTP(hL.HttpServerConfig, appLog)
 	}
 
 	quit := make(chan os.Signal, 1)
