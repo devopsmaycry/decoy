@@ -18,7 +18,10 @@ func (m MSSQL) Banner() []byte {
 	// Total TDS packet:         8 (header) + 18 = 26 = 0x1A
 	return []byte{
 		// TDS header (8 bytes)
-		0x12,       // Type: PRELOGIN response
+		// Type 0x04 = TABULAR_RESULT — correct packet type for a Pre-Login Response.
+		// The client Pre-Login Request uses 0x12; the server response uses 0x04.
+		// nmap matches: \x04\x01..\x00\x00..\x00\x00\x15\x00\x06
+		0x04,       // Type: TABULAR_RESULT (Pre-Login Response)
 		0x01,       // Status: End of message
 		0x00, 0x1A, // Length: 26
 		0x00, 0x00, // SPID

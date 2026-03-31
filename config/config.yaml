@@ -15,9 +15,9 @@ listeners:
   # and logs the first 4 KB received from the client.
   # Available services: smtp, ftp, redis, mysql, mssql
 
-  - port: "25"      # SMTP (requires CAP_NET_BIND_SERVICE or root for ports < 1024)
-    type: tcp
-    service: smtp
+  #- port: "25"      # SMTP (requires CAP_NET_BIND_SERVICE or root for ports < 1024)
+  #  type: tcp
+  #  service: smtp
 
   - port: "2525"    # Alternate SMTP (no privilege required)
     type: tcp
@@ -88,11 +88,11 @@ httpListeners:
   # WordPress login page emulation — redirect GET to /wp-login.php
   # then log every POST credential attempt.
   # only works when you rebuild the service with your own index.html
-  - port: "8088"
-    path: "/wp-login.php"
-    Server: "nginx/1.18.0"
-    X-Powered-By: "PHP/8.1.27"
-    websiteEnabled: true
+  #- port: "8088"
+  #  path: "/wp-login.php"
+  #  Server: "nginx/1.18.0"
+  #  X-Powered-By: "PHP/8.1.27"
+  #  websiteEnabled: true
 
   # Redirect decoy — any visitor is redirected to an internal portal URL.
   # useful for internal http to https redirects

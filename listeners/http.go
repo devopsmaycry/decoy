@@ -1,6 +1,7 @@
 package listeners
 
 import (
+	"crypto/tls"
 	"decoy/config"
 	"decoy/logger"
 	"decoy/web"
@@ -47,7 +48,6 @@ func renderLoginPage(errorMsg string) []byte {
 func StartHTTP(cfg config.HttpServerConfig, log *logger.Logger) {
 	mux := http.NewServeMux()
 
-	// Catch-all: log probes to any path not matching the configured login path.
 	if cfg.Path != "/" {
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			if !connLimiter.allowRequest(realIP(r)) {
@@ -130,6 +130,14 @@ func StartHTTP(cfg config.HttpServerConfig, log *logger.Logger) {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  30 * time.Second,
+	}
+
+	if cfg.SslEnabled {
+		// Advertise only HTTP/1.1 — disables HTTP/2.
+		srv.TLSConfig = &tls.Config{
+			NextProtos: []string{"http/1.1"},
+			MinVersion: tls.VersionTLS12,
+		}
 	}
 
 	log.Log("http_listening", map[string]any{"port": cfg.Port, "ssl": cfg.SslEnabled})
