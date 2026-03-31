@@ -1,7 +1,9 @@
 package services
 
-type SMTP struct{}
+type SMTP struct {
+	banner string
+}
 
 func (s SMTP) Banner() []byte {
-	return []byte("220 mail.corp.local ESMTP Postfix (Debian/GNU)\r\n")
+	return []byte(s.banner + "\r\n")
 }

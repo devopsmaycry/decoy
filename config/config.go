@@ -9,10 +9,13 @@ import (
 )
 
 type listenerConfig struct {
-	Port string `yaml:"port"`
-	Type string `yaml:"type"`
-	Ssl  bool   `yaml:"ssl"`
-	Path string `yaml:"path"`
+	Port    string `yaml:"port"`
+	Type    string `yaml:"type"`
+	Service string `yaml:"service"`
+}
+
+type HttpListenerConfig struct {
+	HttpServerConfig `yaml:",inline"`
 }
 
 type SshConfig struct {
@@ -21,11 +24,22 @@ type SshConfig struct {
 	SshServerVersion string `yaml:"sshShowedVersion"`
 }
 
+type ServiceConfig struct {
+	FtpBanner   string `yaml:"ftpBanner"`
+	RedisBanner string `yaml:"redisBanner"`
+	SmtpBanner  string `yaml:"smtpBanner"`
+}
+
 type HttpServerConfig struct {
-	Server     string `yaml:"Server"`
-	XPoweredBy string `yaml:"X-Powered-By"`
-	CertFile   string `yaml:"serverCertificate"`
-	KeyFile    string `yaml:"serverCertificateKey"`
+	Port        string `yaml:"port"`
+	Server      string `yaml:"Server"`
+	Path        string `yaml:"path"`
+	WebEnabled  bool   `yaml:"websiteEnabled"`
+	RedirectUrl string `yaml:"redirectUrl"`
+	XPoweredBy  string `yaml:"X-Powered-By"`
+	SslEnabled  bool   `yaml:"sslEnabled"`
+	CertFile    string `yaml:"serverCertificate"`
+	KeyFile     string `yaml:"serverCertificateKey"`
 }
 
 type SyslogConfig struct {
@@ -36,12 +50,13 @@ type SyslogConfig struct {
 }
 
 type Config struct {
-	Version   string           `yaml:"version"`
-	Listeners []listenerConfig `yaml:"listeners"`
-	Ssh       SshConfig        `yaml:"ssh"`
-	Https     HttpServerConfig `yaml:"httpServer"`
-	Syslog    SyslogConfig     `yaml:"syslog"`
-	LogLevel  string           `yaml:"logLevel"`
+	Version       string               `yaml:"version"`
+	Listeners     []listenerConfig     `yaml:"listeners"`
+	HttpListeners []HttpListenerConfig `yaml:"httpListeners"`
+	Ssh           SshConfig            `yaml:"ssh"`
+	Service       ServiceConfig        `yaml:"service"`
+	Syslog        SyslogConfig         `yaml:"syslog"`
+	LogLevel      string               `yaml:"logLevel"`
 }
 
 func Load() Config {
@@ -54,21 +69,17 @@ func Load() Config {
 	}
 
 	cfg := Config{
-		Version: "1.2",
-		Listeners: []listenerConfig{
-			{Port: "2222", Type: "ssh", Ssl: false, Path: "/"},
-			{Port: "80808", Type: "http", Ssl: false, Path: "/"},
-		},
+		Version:   "1.2",
+		Listeners: []listenerConfig{},
 		Ssh: SshConfig{
 			LogUsername:      false,
 			LogPassword:      false,
 			SshServerVersion: "SSH-2.0-OpenSSH_8.9p1 Debian-3",
 		},
-		Https: HttpServerConfig{
-			CertFile:   "",
-			KeyFile:    "",
-			Server:     "Apache/2.2.22 (Debian)",
-			XPoweredBy: "PHP/5.6.40",
+		Service: ServiceConfig{
+			FtpBanner:   "220 Microsoft FTP Service",
+			RedisBanner: "+PONG",
+			SmtpBanner:  "220 mail.example.com ESMTP Postfix",
 		},
 		Syslog: SyslogConfig{
 			Enabled:    false,

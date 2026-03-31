@@ -1,7 +1,9 @@
 package services
 
-type FTP struct{}
+type FTP struct {
+	banner string
+}
 
 func (f FTP) Banner() []byte {
-	return []byte("220 Microsoft FTP Service\r\n")
+	return []byte(f.banner + "\r\n")
 }

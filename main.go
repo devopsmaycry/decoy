@@ -4,6 +4,7 @@ import (
 	"decoy/config"
 	"decoy/listeners"
 	"decoy/logger"
+	"decoy/services"
 	"fmt"
 	"log"
 	"os"
@@ -26,17 +27,30 @@ func main() {
 		log.Fatalf("unsupported config version: %s", cfg.Version)
 	}
 
-	// Validate HTTPS config upfront
-	for _, l := range cfg.Listeners {
-		if l.Type == "http" && l.Ssl {
-			if cfg.Https.CertFile == "" || cfg.Https.KeyFile == "" {
+	// Validate httpListener config upfront
+	for _, hL := range cfg.HttpListeners {
+		if hL.SslEnabled {
+			if hL.CertFile == "" || hL.KeyFile == "" {
 				log.Fatal("https listener configured but https.serverCertificate or https.serverCertificateKey is missing")
 			}
 		}
-		if l.Type == "http" && l.Path == "" {
+		if hL.Path == "" {
 			log.Fatal("http listener path is missing")
 		}
 	}
+
+	// validate service banners
+	if cfg.Service.FtpBanner == "" {
+		cfg.Service.FtpBanner = "220 Microsoft FTP Service"
+	}
+	if cfg.Service.RedisBanner == "" {
+		cfg.Service.RedisBanner = "-NOAUTH Authentication required."
+	}
+	if cfg.Service.SmtpBanner == "" {
+		cfg.Service.SmtpBanner = "220 mail.corp.local ESMTP Postfix (Debian/GNU)"
+	}
+
+	services.Init(cfg.Service.FtpBanner, cfg.Service.RedisBanner, cfg.Service.SmtpBanner)
 
 	appLog := logger.New(logger.SyslogConfig(cfg.Syslog))
 	appLog.Log("decoy_started", map[string]any{"listener_count": len(cfg.Listeners)})
@@ -45,16 +59,24 @@ func main() {
 		switch l.Type {
 		case "tcp":
 			go listeners.StartTCP(l.Port, l.Service, appLog)
-		case "http":
-			go listeners.StartHTTP(l.Port, l.Ssl, l.Path, appLog, cfg.Https)
 		case "ssh":
 			go listeners.StartSSH(l.Port, appLog, cfg.Ssh)
 		default:
 			appLog.Log("unknown_listener_type", map[string]any{
 				"type": l.Type,
-				"port": l.Port,
 			})
 		}
+	}
+
+	for i := range cfg.HttpListeners {
+		hL := &cfg.HttpListeners[i]
+		if hL.Server == "" {
+			hL.Server = "Apache/2.2.22 (Debian)"
+		}
+		if hL.XPoweredBy == "" {
+			hL.XPoweredBy = "PHP/5.6.40"
+		}
+		go listeners.StartHTTP(hL.HttpServerConfig, appLog)
 	}
 
 	quit := make(chan os.Signal, 1)

@@ -1,6 +1,6 @@
 # Decoy
 
-A lightweight honeypot service written in Go. It listens on configurable ports and logs all incoming connection attempts with structured JSON output. Supports SSH credential capture, full HTTP/HTTPS request logging, and generic TCP listeners — with optional forwarding to a syslog server.
+A lightweight and powerful honeypot service written in Go. It listens on configurable ports and logs all incoming connection attempts with structured JSON output. Supports SSH credential capture, full HTTP/HTTPS request logging, and generic TCP listeners — with optional forwarding to a syslog server.
 
 ## Features
 

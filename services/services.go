@@ -18,3 +18,9 @@ var registry = map[string]Service{
 func Get(name string) Service {
 	return registry[name]
 }
+
+func Init(ftpBanner string, redisBanner string, smtpBanner string) {
+	registry["ftp"] = FTP{banner: ftpBanner}
+	registry["redis"] = Redis{banner: redisBanner}
+	registry["smtp"] = SMTP{banner: smtpBanner}
+}
