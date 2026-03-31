@@ -44,7 +44,7 @@ func main() {
 	for _, l := range cfg.Listeners {
 		switch l.Type {
 		case "tcp":
-			go listeners.StartTCP(l.Port, appLog)
+			go listeners.StartTCP(l.Port, l.Service, appLog)
 		case "http":
 			go listeners.StartHTTP(l.Port, l.Ssl, l.Path, appLog, cfg.Https)
 		case "ssh":
