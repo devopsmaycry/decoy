@@ -498,7 +498,7 @@ docker logs -f decoy
 
 ## Pre-compiled deployment
 
-Build a static binary for any Linux target without Docker or Go installed on the host.
+Build a static binary for any Linux target or Windows without Docker or Go installed on the host.
 
 ### Build
 
@@ -508,6 +508,9 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o decoy .
 
 # arm64 (Raspberry Pi, AWS Graviton)
 CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o decoy .
+
+# amd64 Windows executable
+CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-w -s" -o decoy-windows-amd64.exe .
 ```
 
 ### Ubuntu / Debian
@@ -611,6 +614,22 @@ chmod +x /etc/init.d/decoy
 rc-update add decoy default
 rc-service decoy start
 ```
+
+### Windows
+The Windows binary does not support syslog. Use the local file logging instead and forward any logfiles via Filebeat or any other log forwarder.
+
+```powershell
+# Run from an elevated PowerShell prompt to allow binding to privileged ports
+.\decoy-windows-amd64.exe -config .\config\config.yaml
+```
+Please note that the logfile path must escaped using \\ in the config on Windows, e.g. `C:\\decoy\\logs\\decoy.log`.
+
+#### Windows Firewall
+
+Execute the following commands in an elevated PowerShell prompt to allow inbound traffic on the configured ports:
+
+```powershell
+New-NetFirewallRule -DisplayName "Decoy SSH" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 2222
 
 ---
 
