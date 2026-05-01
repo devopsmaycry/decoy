@@ -42,11 +42,14 @@ type HttpServerConfig struct {
 	KeyFile     string `yaml:"serverCertificateKey"`
 }
 
-type SyslogConfig struct {
-	Enabled    bool   `yaml:"enabled"`
-	Server     string `yaml:"server"`
-	Port       string `yaml:"port"`
-	CliEnabled bool   `yaml:"cliEnabled"`
+type LogConfig struct {
+	SyslogEnabled      bool   `yaml:"syslogEnabled"`
+	SyslogServer       string `yaml:"syslogServer"`
+	SyslogPort         string `yaml:"syslogPort"`
+	CliEnabled         bool   `yaml:"cliEnabled"`
+	FileLoggingEnabled bool   `yaml:"fileLoggingEnabled"`
+	FilePath           string `yaml:"filePath"`
+	LogLevel           string `yaml:"logLevel"`
 }
 
 type Config struct {
@@ -55,8 +58,7 @@ type Config struct {
 	HttpListeners []HttpListenerConfig `yaml:"httpListeners"`
 	Ssh           SshConfig            `yaml:"ssh"`
 	Service       ServiceConfig        `yaml:"service"`
-	Syslog        SyslogConfig         `yaml:"syslog"`
-	LogLevel      string               `yaml:"logLevel"`
+	Log           LogConfig            `yaml:"log"`
 }
 
 func Load() Config {
@@ -69,7 +71,7 @@ func Load() Config {
 	}
 
 	cfg := Config{
-		Version:   "1.2",
+		Version:   "1.3",
 		Listeners: []listenerConfig{},
 		Ssh: SshConfig{
 			LogUsername:      false,
@@ -81,11 +83,13 @@ func Load() Config {
 			RedisBanner: "+PONG",
 			SmtpBanner:  "220 mail.example.com ESMTP Postfix",
 		},
-		Syslog: SyslogConfig{
-			Enabled:    false,
-			CliEnabled: true,
+		Log: LogConfig{
+			SyslogEnabled:      false,
+			CliEnabled:         true,
+			FileLoggingEnabled: true,
+			FilePath:           "/var/log/decoy.log",
+			LogLevel:           "info",
 		},
-		LogLevel: "info",
 	}
 
 	if err := yaml.Unmarshal(data, &cfg); err != nil {

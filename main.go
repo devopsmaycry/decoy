@@ -23,7 +23,7 @@ func main() {
 	cfg := config.Load()
 
 	// Validate config version
-	if cfg.Version != "1.2" {
+	if cfg.Version != "1.3" {
 		log.Fatalf("unsupported config version: %s", cfg.Version)
 	}
 
@@ -52,7 +52,7 @@ func main() {
 
 	services.Init(cfg.Service.FtpBanner, cfg.Service.RedisBanner, cfg.Service.SmtpBanner)
 
-	appLog := logger.New(logger.SyslogConfig(cfg.Syslog))
+	appLog := logger.New(cfg.Log)
 	appLog.Log("decoy_started", map[string]any{"listener_count": len(cfg.Listeners)})
 
 	for _, l := range cfg.Listeners {
@@ -83,4 +83,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	<-quit
 	appLog.Log("decoy_stopped", nil)
+	if err := appLog.Close(); err != nil {
+		log.Printf("error closing logger: %v", err)
+	}
 }
