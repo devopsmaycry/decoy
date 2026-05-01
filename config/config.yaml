@@ -1,4 +1,4 @@
-version: "1.2"
+version: "1.3"
 
 # ─────────────────────────────────────────────────────────
 #  SSH & TCP listeners
@@ -129,12 +129,16 @@ service:
 # ─────────────────────────────────────────────────────────
 #  Logging
 # ─────────────────────────────────────────────────────────
-syslog:
+log:
   # Write JSON log lines to stdout (recommended — pipe to journald, Vector, etc.)
   cliEnabled: true
 
+  # Write Log to local file
+  fileLoggingEnabled: true
+  filePath: "/tmp/decoy.log"
+
   # Forward logs to a syslog server via UDP.
   # Combine with Logstash, Graylog, or any UDP syslog receiver.
-  enabled: false
-  server: "192.168.10.10"
+  syslogEnabled: false
+  syslogServer: "192.168.10.10"
   port: "514"

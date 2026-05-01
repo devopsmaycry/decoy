@@ -8,7 +8,7 @@ A lightweight honeypot service written in Go. It listens on configurable ports a
 - **HTTP / HTTPS** — Logs method, URI, query parameters, all headers, and the full request body. POST submissions are parsed for `username` and `password` fields. A realistic login page is served to keep attackers engaged. Any request to a path not matching the configured login path is logged as `http_probe`.
 - **TCP service emulation** — Sends realistic protocol banners for SMTP, FTP, Redis, MySQL (Protocol v10 handshake), and MSSQL (TDS Pre-Login response). Logs the first 4 KB received from the client.
 - **Rate limiting** — Built-in protection against log flooding and resource exhaustion: max 500 concurrent TCP/SSH connections globally, max 30 connections per IP per minute.
-- **Structured JSON logging** — Every event is a single JSON line written to stdout and/or forwarded to a syslog server via UDP.
+- **Structured JSON logging** — Every event is a single JSON line written to stdout, a local log file, and/or forwarded to a syslog server via UDP.
 - **Proxy-aware** — HTTP listeners extract the real client IP from `X-Forwarded-For` and `X-Real-IP` headers when running behind a load balancer or reverse proxy.
 - **Configurable via YAML** — All ports, banners, and output options are controlled through a single config file.
 - **Static binary / container** — Ships as a single ~6 MB static binary. Docker image based on `scratch`.
@@ -28,12 +28,12 @@ go run . -config config/config.yaml
 
 ## Configuration
 
-All configuration lives in `config/config.yaml`. The config version must be `"1.2"`.
+All configuration lives in `config/config.yaml`. The config version must be `"1.3"`.
 
 ### Minimal example
 
 ```yaml
-version: "1.2"
+version: "1.3"
 
 listeners:
   - port: "2222"
@@ -44,14 +44,14 @@ httpListeners:
     path: "/admin/login"
     websiteEnabled: true
 
-syslog:
+log:
   cliEnabled: true
 ```
 
 ### Full reference example
 
 ```yaml
-version: "1.2"
+version: "1.3"
 
 # SSH and TCP listeners
 listeners:
@@ -97,10 +97,12 @@ service:
   redisBanner: "-NOAUTH Authentication required."
   smtpBanner:  "220 mail.corp.local ESMTP Postfix (Debian/GNU)"
 
-syslog:
+log:
   cliEnabled: true
-  enabled: false
-  server: "192.168.10.10"
+  fileLoggingEnabled: true
+  filePath: "/tmp/decoy.log"
+  syslogEnabled: false
+  syslogServer: "192.168.10.10"
   port: "514"
 ```
 
@@ -148,13 +150,15 @@ syslog:
 
 MySQL and MSSQL banners are fixed binary protocol responses and cannot be overridden via config.
 
-#### `syslog`
+#### `log`
 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `cliEnabled` | bool | `true` | Write JSON log lines to stdout |
-| `enabled` | bool | `false` | Forward logs to a syslog server via UDP |
-| `server` | string | — | Syslog server address |
+| `fileLoggingEnabled` | bool | `false` | Write JSON log lines to a local file |
+| `filePath` | string | — | Path to the local log file (required when `fileLoggingEnabled: true`) |
+| `syslogEnabled` | bool | `false` | Forward logs to a syslog server via UDP |
+| `syslogServer` | string | — | Syslog server address |
 | `port` | string | — | Syslog server UDP port |
 
 ---
