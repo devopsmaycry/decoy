@@ -56,10 +56,12 @@ jobs:
             go build -ldflags="-w -s" -o decoy-linux-amd64 .
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \
             go build -ldflags="-w -s" -o decoy-linux-arm64 .
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
+            go build -ldflags="-w -s" -o decoy-windows-amd64.exe .
 
       - name: Generate checksums
         run: |
-          sha256sum decoy-linux-amd64 decoy-linux-arm64 > checksums.txt
+          sha256sum decoy-linux-amd64 decoy-linux-arm64 decoy-windows-amd64.exe > checksums.txt
           cat checksums.txt
 
       # ── Generate SBOM with cdxgen (CycloneDX JSON) ──────────────────────────
@@ -116,5 +118,6 @@ jobs:
           files: |
             decoy-linux-amd64
             decoy-linux-arm64
+            decoy-windows-amd64.exe
             checksums.txt
             sbom.cdx.json

@@ -3,7 +3,6 @@ package logger
 import (
 	"encoding/json"
 	"fmt"
-	"log/syslog"
 	"os"
 	"sync"
 	"time"
@@ -11,26 +10,24 @@ import (
 	"decoy/config"
 )
 
+type syslogSink interface {
+	Info(string) error
+	Close() error
+}
+
 type Logger struct {
 	mu                 sync.Mutex
 	cliEnabled         bool
 	fileLoggingEnabled bool
 	filePath           string
 	fileWriter         *os.File
-	syslogWriter       *syslog.Writer
+	syslogWriter       syslogSink
 }
 
 func New(cfg config.LogConfig) *Logger {
 	l := &Logger{cliEnabled: cfg.CliEnabled, fileLoggingEnabled: cfg.FileLoggingEnabled, filePath: cfg.FilePath}
 
-	if cfg.SyslogEnabled {
-		w, err := syslog.Dial("udp", fmt.Sprintf("%s:%s", cfg.SyslogServer, cfg.SyslogPort), syslog.LOG_INFO|syslog.LOG_DAEMON, "decoy")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "syslog connect error: %v\n", err)
-		} else {
-			l.syslogWriter = w
-		}
-	}
+	l.syslogWriter = initSyslog(cfg)
 
 	if cfg.FileLoggingEnabled {
 		f, err := os.OpenFile(cfg.FilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
